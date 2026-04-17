@@ -86,7 +86,7 @@ source venv/bin/activate
 You need to install `discord.py` (with voice support) and `yt-dlp`:
 
 ```bash
-pip install "discord.py[voice]" yt-dlp
+pip install discord.py yt-dlp PyNaCl davey
 ```
 
 Or use the `requirements.txt` file and install it via:
