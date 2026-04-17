@@ -105,7 +105,7 @@ class Roles:
     OWNER = "Owner Role Name"
     
     # Roles allowed to use music commands (/play, /skip, etc.)
-    MUSIC = ["Member", "DJ", OWNER] 
+    MUSIC = ["Member", OWNER] 
 ```
 *Note: The bot features a self-diagnostic system. If you leave these role strings empty in the code, the bot will still start, but it will send a helpful `ConfigError` message in the chat reminding the admin to set up the roles.*
 
