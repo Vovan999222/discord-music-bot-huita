@@ -89,7 +89,7 @@ You need to install `discord.py` (with voice support) and `yt-dlp`:
 pip install "discord.py[voice]" yt-dlp
 ```
 
-Or create a `requirements.txt` file and install via:
+Or use the `requirements.txt` file and install it via:
 ```bash
 pip install -r requirements.txt
 ```
