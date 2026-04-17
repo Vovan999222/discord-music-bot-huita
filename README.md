@@ -62,7 +62,8 @@ brew install ffmpeg
 ### 1. Clone the repository
 
 ```bash
-git clone [https://github.com/YourUsername/your-repo-name.git](https://github.com/YourUsername/your-repo-name.git)
+git clone https://github.com/Vovan999222/discord-music-bot-huita.git
+
 cd your-repo-name
 ```
 
@@ -97,7 +98,7 @@ BOT_TOKEN = ""
 ```
 
 **2. Configure Role Access (Important!):**
-Open `ds-bot.py` and find the `Roles` class at the top of the file. You **must** define the roles that are allowed to use the bot commands. 
+Open `bot.py` and find the `Roles` class at the top of the file. You **must** define the roles that are allowed to use the bot commands. 
 
 ```python
 class Roles:
@@ -112,7 +113,7 @@ class Roles:
 ### 5. Run the bot
 
 ```bash
-python ds-bot.py
+python bot.py
 ```
 
 ### 6. Syncing Slash Commands
