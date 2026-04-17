@@ -64,7 +64,7 @@ brew install ffmpeg
 ```bash
 git clone https://github.com/Vovan999222/discord-music-bot-huita.git
 
-cd your-repo-name
+cd path-to-your-directory
 ```
 
 ### 2. Create a virtual environment (Recommended)
@@ -87,6 +87,11 @@ You need to install `discord.py` (with voice support) and `yt-dlp`:
 
 ```bash
 pip install "discord.py[voice]" yt-dlp
+```
+
+Or create a `requirements.txt` file and install via:
+```bash
+pip install -r requirements.txt
 ```
 
 ### 4. Configuration
