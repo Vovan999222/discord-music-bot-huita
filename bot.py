@@ -97,14 +97,14 @@ async def play_next(ctx):
                 source = discord.PCMVolumeTransformer(
                     discord.FFmpegPCMAudio(url, executable='ffmpeg', **FFMPEG_OPTIONS)
                 )
-                source.volume = 1.0
-
+                req_vol = link.get('vol', 100)
+                source.volume = req_vol / 100
                 def after_playing(error):
                     if error:
                         print(f"Ошибка аудио: {error}")
                     asyncio.run_coroutine_threadsafe(play_next(ctx), bot.loop)
                 voice_client.play(source, after=after_playing)
-                await ctx.send(f'▶️ **Сейчас играет:** {title}')
+                await ctx.send(f'▶️ **Сейчас играет:** {title} *(Громкость: {req_vol}%)*')
             except Exception as e:
                 print(f"❌ Ошибка воспроизведения: {e}")
                 await play_next(ctx)
@@ -138,9 +138,16 @@ async def sync(ctx):
 
 @bot.hybrid_command(name='play', description="Включить трек или добавить его в очередь")
 @has_music_roles()
-@app_commands.describe(query="Напишите название песни или вставьте ссылку на YouTube")
-async def play(ctx, *, query: str):
+@app_commands.describe(
+    url="Напишите название песни или вставьте ссылку",
+    vol="Укажите громкость от 0 до 100 (по умолчанию 100)"
+)
+async def play(ctx, url: str, vol: int = 100):
     await ctx.defer()
+
+    if vol < 0: vol = 0
+    if vol > 100: vol = 100
+    
     if not ctx.author.voice:
         await ctx.send("❌ Зайди в голосовой канал!")
         return
@@ -158,7 +165,7 @@ async def play(ctx, *, query: str):
 
     with yt_dlp.YoutubeDL(YDL_OPTS) as ydl:
         try:
-            target = query if query.startswith('http') else f"ytsearch:{query}"
+            target = url if url.startswith('http') else f"ytsearch:{url}"
             info = await asyncio.to_thread(ydl.extract_info, target, download=False)
 
             added = False
@@ -166,28 +173,29 @@ async def play(ctx, *, query: str):
 
             entries = info.get('entries')
             if entries:
-                if query.startswith('http'): 
+                if url.startswith('http'): 
                     for entry in entries:
                         if entry:
-                            queues[ctx.guild.id].append({'url': entry['url'], 'title': entry.get('title', 'Трек')})
+                            queues[ctx.guild.id].append({'url': entry['url'], 'title': entry.get('title', 'Трек'), 'vol': vol})
                             added = True
                     first_title = f"Плейлист ({len(entries)} шт.)"
                 elif len(entries) > 0:
                     top = entries[0]
-                    queues[ctx.guild.id].append({'url': top['url'], 'title': top.get('title', 'Трек')})
+                    queues[ctx.guild.id].append({'url': top['url'], 'title': top.get('title', 'Трек'), 'vol': vol})
                     first_title = top.get('title', 'Трек')
                     added = True
             else:
-                queues[ctx.guild.id].append({'url': info['webpage_url'], 'title': info.get('title', 'Трек')})
+                queues[ctx.guild.id].append({'url': info['webpage_url'], 'title': info.get('title', 'Трек'), 'vol': vol})
                 first_title = info.get('title', 'Трек')
                 added = True
 
             if not added:
                 await ctx.send("❌ Ничего не найдено.")
                 return
+
             if voice_client.is_playing() or voice_client.is_paused():
                 queue_pos = len(queues[ctx.guild.id])
-                await ctx.send(f"✅ В очередь добавлено: **{first_title}** (позиция: {queue_pos})")
+                await ctx.send(f"✅ В очередь добавлено: **{first_title}** (позиция: {queue_pos}, громкость: {vol}%)")
             else:
                 if ctx.interaction:
                     try:
