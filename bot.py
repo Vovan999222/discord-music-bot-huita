@@ -4,6 +4,7 @@ from discord import app_commands
 from config import BOT_TOKEN
 import yt_dlp
 import asyncio
+from typing import Optional
 
 # НАСТРОЙКИ РОЛЕЙ
 class Roles:
@@ -56,6 +57,7 @@ intents.voice_states = True
 
 bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 queues = {}
+server_volumes = {}
 
 @bot.event
 async def on_ready():
@@ -97,8 +99,9 @@ async def play_next(ctx):
                 source = discord.PCMVolumeTransformer(
                     discord.FFmpegPCMAudio(url, executable='ffmpeg', **FFMPEG_OPTIONS)
                 )
-                req_vol = link.get('vol', 100)
+                req_vol = server_volumes.get(ctx.guild.id, 100)
                 source.volume = req_vol / 100
+
                 def after_playing(error):
                     if error:
                         print(f"Ошибка аудио: {error}")
@@ -140,26 +143,29 @@ async def sync(ctx):
 @has_music_roles()
 @app_commands.describe(
     url="Напишите название песни или вставьте ссылку",
-    vol="Укажите громкость от 0 до 100 (по умолчанию 100)"
+    vol="Громкость от 0 до 100 (если не указать, останется текущая)"
 )
-async def play(ctx, url: str, vol: int = 100):
+async def play(ctx, url: str, vol: Optional[int] = None):
     await ctx.defer()
 
-    if vol < 0: vol = 0
-    if vol > 100: vol = 100
-    
+    if vol is not None:
+        if vol < 0: vol = 0
+        if vol > 100: vol = 100
+        server_volumes[ctx.guild.id] = vol
+        vc_current = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+        if vc_current and vc_current.source:
+            vc_current.source.volume = vol / 100
+
     if not ctx.author.voice:
         await ctx.send("❌ Зайди в голосовой канал!")
         return
     vc = ctx.author.voice.channel
     voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
-
     if voice_client is None:
         await vc.connect()
         voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
     elif voice_client.channel != vc:
         await voice_client.move_to(vc)
-
     if ctx.guild.id not in queues:
         queues[ctx.guild.id] = []
 
@@ -176,16 +182,16 @@ async def play(ctx, url: str, vol: int = 100):
                 if url.startswith('http'): 
                     for entry in entries:
                         if entry:
-                            queues[ctx.guild.id].append({'url': entry['url'], 'title': entry.get('title', 'Трек'), 'vol': vol})
+                            queues[ctx.guild.id].append({'url': entry['url'], 'title': entry.get('title', 'Трек')})
                             added = True
                     first_title = f"Плейлист ({len(entries)} шт.)"
                 elif len(entries) > 0:
                     top = entries[0]
-                    queues[ctx.guild.id].append({'url': top['url'], 'title': top.get('title', 'Трек'), 'vol': vol})
+                    queues[ctx.guild.id].append({'url': top['url'], 'title': top.get('title', 'Трек')})
                     first_title = top.get('title', 'Трек')
                     added = True
             else:
-                queues[ctx.guild.id].append({'url': info['webpage_url'], 'title': info.get('title', 'Трек'), 'vol': vol})
+                queues[ctx.guild.id].append({'url': info['webpage_url'], 'title': info.get('title', 'Трек')})
                 first_title = info.get('title', 'Трек')
                 added = True
 
@@ -195,13 +201,8 @@ async def play(ctx, url: str, vol: int = 100):
 
             if voice_client.is_playing() or voice_client.is_paused():
                 queue_pos = len(queues[ctx.guild.id])
-                await ctx.send(f"✅ В очередь добавлено: **{first_title}** (позиция: {queue_pos}, громкость: {vol}%)")
-            else:
-                if ctx.interaction:
-                    try:
-                        await ctx.interaction.delete_original_response()
-                    except discord.NotFound:
-                        pass
+                current_vol = server_volumes.get(ctx.guild.id, 100)
+                await ctx.send(f"✅ В очередь добавлено: **{first_title}** (позиция: {queue_pos}, громкость: {current_vol}%)")
 
             if not voice_client.is_playing() and not voice_client.is_paused():
                 await play_next(ctx)
@@ -240,15 +241,15 @@ async def resume(ctx):
 @has_music_roles()
 @app_commands.describe(vol="Укажите уровень громкости от 0 до 100")
 async def volume(ctx, vol: int):
+    if vol < 0: vol = 0
+    if vol > 100: vol = 100
+    server_volumes[ctx.guild.id] = vol
     vc = discord.utils.get(bot.voice_clients, guild=ctx.guild)
     if vc and vc.source:
-        if 0 <= vol <= 100:
-            vc.source.volume = vol / 100
-            await ctx.send(f"🔊 Громкость: {vol}%")
-        else:
-            await ctx.send("Число должно быть от 0 до 100.")
+        vc.source.volume = vol / 100
+        await ctx.send(f"🔊 Громкость изменена на: {vol}%")
     else:
-        await ctx.send("Музыка не играет.")
+        await ctx.send(f"🔊 Громкость для следующих треков установлена на: {vol}%")
 
 @bot.hybrid_command(name='stop', description="Остановить музыку и отключить бота")
 @has_music_roles()
