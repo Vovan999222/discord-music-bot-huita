@@ -37,6 +37,8 @@ YDL_OPTS = {
     'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'restrictfilenames': True,
     'noplaylist': False,
+    'extract_flat': 'in_playlist',
+    'playlistend': 50,
     'nocheckcertificate': True,
     'ignoreerrors': False,
     'logtostderr': False,
@@ -107,7 +109,7 @@ async def play_next(ctx):
                         print(f"Ошибка аудио: {error}")
                     asyncio.run_coroutine_threadsafe(play_next(ctx), bot.loop)
                 voice_client.play(source, after=after_playing)
-                await ctx.send(f'▶️ **Сейчас играет:** {title} *(Громкость: {req_vol}%)*')
+                await ctx.send(f'▶️ **Сейчас играет:** {title}')
             except Exception as e:
                 print(f"❌ Ошибка воспроизведения: {e}")
                 await play_next(ctx)
@@ -162,7 +164,7 @@ async def play(ctx, url: str, vol: Optional[int] = None):
     vc = ctx.author.voice.channel
     voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
     if voice_client is None:
-        await vc.connect()
+        await vc.connect(self_deaf=True)
         voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
     elif voice_client.channel != vc:
         await voice_client.move_to(vc)
@@ -265,9 +267,12 @@ async def stop(ctx):
 @has_music_roles()
 async def queue(ctx):
     if ctx.guild.id in queues and queues[ctx.guild.id]:
-        list_s = "\n".join([f"{i+1}. {s['title']}" for i, s in enumerate(queues[ctx.guild.id][:10])])
+        display_count = 10
+        list_s = "\n".join([f"{i+1}. {s['title']}" for i, s in enumerate(queues[ctx.guild.id][:display_count])])
         msg = f"📜 **Очередь:**\n{list_s}"
-        if len(queues[ctx.guild.id]) > 10: msg += "\n*...и другие*"
+        total_tracks = len(queues[ctx.guild.id])
+        if total_tracks > display_count:
+            msg += f"\n\n*...и еще {total_tracks - display_count} треков*"
         await ctx.send(msg)
     else:
         await ctx.send("📭 Очередь пуста.")
