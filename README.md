@@ -5,6 +5,8 @@
 ![yt-dlp](https://img.shields.io/badge/yt--dlp-Enabled-red?style=for-the-badge&logo=youtube)
 ![FFmpeg](https://img.shields.io/badge/FFmpeg-Enabled-green?style=for-the-badge&logo=ffmpeg)
 
+**Read this in other languages:** [click](https://docs.volodimir001.me/discord-music-bot-huita.html)
+
 This Discord bot is designed to seamlessly stream high-quality music directly into your voice channels. 
 
 The bot automatically searches for tracks on YouTube, extracts the best available audio stream, and plays it with full support for queues, volume control, and modern Slash Commands.
